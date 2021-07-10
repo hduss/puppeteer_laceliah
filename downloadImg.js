@@ -7,7 +7,10 @@ const fetch = require('node-fetch');
 const url = "http://laceliah.cowblog.fr/images/Illu/10ans.jpg"
 
 
-function saveImageToDisk(url, filename){
+function donwloadImg(url, filename){
+
+	console.log('url => ', url)
+    console.log('filename => ', filename)
     fetch(url)
     .then(res => {
         const dest = fs.createWriteStream(filename);
@@ -16,12 +19,18 @@ function saveImageToDisk(url, filename){
     .catch((err) => {
         console.log(err)
     })
+
+
 }
 
 
 let existingPath = path.resolve('uploads')
-saveImageToDisk(url, existingPath + '/image3454.jpg')
+// DownloaderImage(url, existingPath + '/image3454.jpg')
 // downloadImg(url)
 
 
-module.exports.donwloadImg = saveImageToDisk
+function DownloaderFiles(url, filename){
+
+}
+
+module.exports.donwloadImg = donwloadImg

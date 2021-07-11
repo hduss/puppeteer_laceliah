@@ -5,50 +5,12 @@ const path = require('path')
 const downloader = require('./downloadImg.js')
 const mkdirp = require("mkdirp");
 
-
-// console.log(downloader.donwloadImg())
-
+const UPLOAD_FOLDER = "uploads/"
+const NBR_PAGE = 2
 
 const downloadPath = path.resolve('uploads')
 const baseUrl = "http://laceliah.cowblog.fr/"
-const testUrl = ' http://laceliah.cowblog.fr/images/photos/DSC9149.jpg'
-const file = path.basename(testUrl)
-const filename = downloadPath + '/test/' +  path.basename(testUrl)
-
-
-
-const createFiles = (path, file) => {
-
-}
-
-
-if (fs.existsSync('uploads/test')) {
-    console.log('Found file')
-}else{
-	console.log("File not exist")
-	fs.mkdir(path.join(__dirname, 'uploads/test'), (err) => {
-	    if (err) {
-	        return console.error(err)
-	    }else{
-
-	    }
-
-		fs.writeFile('uploads/test/nouveauFichier.txt', 'Mon contenu', function (err) {
-			if (err) throw err
-		console.log('Fichier créé !')
-		})
-    	console.log('Directory created successfully!')
-	})
-}
-
-
-console.log('downloadPath => ', downloadPath)
-console.log('testUrl => ', testUrl)
-console.log('filename => ', filename)
-console.log('File => ', file)
-
-downloader.donwloadImg(testUrl, filename)
-
+const fileCreationError = []
 
 process.setMaxListeners(Infinity)
 
@@ -57,7 +19,7 @@ process.setMaxListeners(Infinity)
 // Génère toutes les urls à scrapp
 const getAllUrls = async baseUrl => {
 	const urlList = [];
-	for( let i = 2; i < 3; i++){
+	for( let i = 1; i < NBR_PAGE; i++){
 		urlList.push(baseUrl + i + ".html");
 	}
 	return urlList;
@@ -68,8 +30,7 @@ const getAllUrls = async baseUrl => {
 // Récupère les données (titre, body, images) d'une page web
 const getallDatas = async url => {
 
-	console.log('getDataFromUrl url => ', url)
-
+	console.log('Url chargée => ', url)
 
 	// const browser = await puppeteer.launch({ headless: false })
 	const browser = await puppeteer.launch()
@@ -89,29 +50,22 @@ const getallDatas = async url => {
 
 			let title = element.querySelector('div.article-top > div.left')
 			let body = element.querySelector('div.article-body')
-			// let images = element.querySelectorAll('div.article-body img', img => img.src)
-
-			
 		    let imagefiles = Array.from(
 		      element.querySelectorAll('div.article-body img'),
 		      img => img.src)
 
+
 			articles.push({
 				title : title.textContent,
-				// body : body.textContent,
+				body : body.textContent,
 				images : imagefiles
 			})
 		}
 
-
 		return articles
 	})
 
-	
 	browser.close()
-
-	// console.log(url)
-	// console.log(articles)
 	return articles
 }
 
@@ -147,28 +101,72 @@ scrap().then( results => {
 function createFolderProcess(results){
 
 	// console.log(results)
-
 	for(let i = 0; i < results.length; i++){
 		for(let j = 0; j < results[i].length; j++){
-			// console.log(results[i])
-			// console.log(results[i][j])
+
 
 			const title = results[i][j].title 
+			const content = results[i][j].body
 			const images = results[i][j].images 
+			const uploadPath = UPLOAD_FOLDER + title
 
 			// console.log('Title => ', title)
 			// console.log('Images => ', images)
 
-			for(let k = 0; k < images.length; k++){
+			if (fs.existsSync(uploadPath)) {
+				console.log('FICHIER DEJA EXISTANT => ', uploadPath)
+			}else{
+				// console.log("File not exist")
 
-				let image = images[k];
-				// console.log('img URL => ', image)
-				let filename = downloadPath + "\'" + path.basename(image)
-				// console.log('Filename => ', filename)
-				// downloader.donwloadImg(images[k], filename)
+				fs.mkdir(path.join(__dirname, uploadPath), (err) => {
+				    if (err) {
+				        console.error(err)
+				        fileCreationError.push(uploadPath)
+				    }else{
+				    	// console.log('Dossier '  + uploadPath + ' crée avec succès')
+
+				    	fs.writeFile(uploadPath + '/Article.txt', content, function (err) {
+
+				    		if(err) console.log('Error MKDIR => ', err)
+							for(let k = 0; k < images.length; k++){
+								let image = images[k];
+								let filename = downloadPath + "\'" + path.basename(image)
+								downloader.donwloadImg(image, uploadPath + '/' + path.basename(image))
+							}
+						})
+
+				    }
+				})
 			}
 		}
 	}
+
+	console.log('ERROR => ', fileCreationError)
 }
 
 
+
+// path => uploads/folder
+// file => name of txt file
+// const createFiles = (path, file, content) => {
+
+// 	if (fs.existsSync(path)) {
+// 	    console.log('Found file')
+// 	}else{
+// 		console.log("File not exist")
+// 		fs.mkdir(path.join(__dirname, path), (err) => {
+// 		    if (err) {
+// 		        return console.error(err)
+// 		    }else{
+// 		    	console.log('Dossier '  + path + ' crée avec succès')
+
+// 		    }
+
+// 			fs.writeFile(path + file, content, function (err) {
+// 				if (err) throw err
+// 			console.log('Fichier ' + file + ' créé !')
+// 			})
+	    	
+// 		})
+// 	}
+// }

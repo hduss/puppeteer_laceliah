@@ -1,19 +1,23 @@
-
-const puppeteer = require('puppeteer')
-const fs = require('fs')
-const path = require('path')
-const downloader = require('./downloadImg.js')
+const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
+const downloader = require('./downloadImg.js');
 const mkdirp = require("mkdirp");
 
-const UPLOAD_FOLDER = "uploads/"
-const NBR_PAGE = 2
-
-const downloadPath = path.resolve('uploads')
-const baseUrl = "http://laceliah.cowblog.fr/"
-const fileCreationError = []
+const UPLOAD_FOLDER = "download/";
+const NBR_PAGE = 2;
+// const downloadPath = path.resolve('uploads');
+const baseUrl = "http://laceliah.cowblog.fr/";
+const fileCreationError = [];
 
 process.setMaxListeners(Infinity)
 
+process.argv.forEach(function (val, index, array) {
+	console.log(index + ': ' + val);
+});
+
+var args = process.argv.slice(2);
+console.log(`args => ${args}`);
 
 
 // Génère toutes les urls à scrapp
@@ -26,147 +30,104 @@ const getAllUrls = async baseUrl => {
 }
 
 
-
-// Récupère les données (titre, body, images) d'une page web
+// Get datas from webpage
 const getallDatas = async url => {
 
-	console.log('Url chargée => ', url)
+	console.log(`Url chargée => ${url}`);
 
 	// const browser = await puppeteer.launch({ headless: false })
-	const browser = await puppeteer.launch()
-	const page = await browser.newPage()
+	const browser = await puppeteer.launch();
+	const page = await browser.newPage();
 
-	// Config du timeout
+	// Timeout config
     await page.setDefaultNavigationTimeout(0);
-	await page.goto(url)
-
-	await page.waitFor(1000) 
+	await page.goto(url);
+	await page.waitForTimeout(1000) ;
 
 	const articles = await page.evaluate((url) => {
 
-		let articles = []
-		let elements = document.querySelectorAll('div.article')
+		let articles = [];
+		let elements = document.querySelectorAll('div.article');
 		for(element of elements){
 
-			let title = element.querySelector('div.article-top > div.left')
-			let body = element.querySelector('div.article-body')
+			let title = element.querySelector('div.article-top > div.left');
+			let body = element.querySelector('div.article-body');
 		    let imagefiles = Array.from(
 		      element.querySelectorAll('div.article-body img'),
-		      img => img.src)
-
+		      img => img.src);
 
 			articles.push({
 				title : title.textContent,
 				body : body.textContent,
 				images : imagefiles
-			})
+			});
 		}
 
-		return articles
+		return articles;
 	})
 
-	browser.close()
-	return articles
+	browser.close();
+	return articles;
 }
 
 
-// Fonctionnement global
+// Scrapp 
 const scrap = async() => {
 
-	console.log('scrappp')
-	const urlList = await getAllUrls(baseUrl)
+	const urlList = await getAllUrls(baseUrl);
 	const results = await Promise.all(
 		urlList.map(url => getallDatas(url)),
-	)
-
-	return results
+	);
+	return results;
 }
 
 
-
-//const urls = getAllUrls(url)
-
-// Executioon de scrap + then
+// Scrapp execution
 scrap().then( results => {
-	// console.log(results)
-	createFolderProcess(results)
-	console.log('fin script')
+	createFolderProcess(results);
+	console.log('End script ...');
 
 }).catch(error => {
-	console.log(error)
+	console.log(`Scrapp error => ${error}`);
 })
 
 
-// Créer les fichiers pour chaque article
-function createFolderProcess(results){
+// Create folder for each article
+const createFolderProcess = results => {
+	// console.log(`Results => ${results}`);
+	// console.log('Results => ', results);
 
-	// console.log(results)
 	for(let i = 0; i < results.length; i++){
 		for(let j = 0; j < results[i].length; j++){
 
+			const title = results[i][j].title;
+			const content = results[i][j].body;
+			const images = results[i][j].images ;
+			const downloadPath = UPLOAD_FOLDER + title;
 
-			const title = results[i][j].title 
-			const content = results[i][j].body
-			const images = results[i][j].images 
-			const uploadPath = UPLOAD_FOLDER + title
-
-			// console.log('Title => ', title)
-			// console.log('Images => ', images)
-
-			if (fs.existsSync(uploadPath)) {
-				console.log('FICHIER DEJA EXISTANT => ', uploadPath)
+			if (fs.existsSync(downloadPath)) {
+				console.log(`File already exist => ${downloadPath}`);
 			}else{
-				// console.log("File not exist")
-
-				fs.mkdir(path.join(__dirname, uploadPath), (err) => {
+				fs.mkdir(path.join(__dirname, downloadPath), (err) => {
 				    if (err) {
-				        console.error(err)
-				        fileCreationError.push(uploadPath)
+				        console.error(err);
+				        fileCreationError.push(downloadPath);
 				    }else{
-				    	// console.log('Dossier '  + uploadPath + ' crée avec succès')
+				    	fs.writeFile(downloadPath + '/Article.txt', content, err => {
 
-				    	fs.writeFile(uploadPath + '/Article.txt', content, function (err) {
-
-				    		if(err) console.log('Error MKDIR => ', err)
+				    		if(err) console.log('Error MKDIR => ', err);
 							for(let k = 0; k < images.length; k++){
 								let image = images[k];
-								let filename = downloadPath + "\'" + path.basename(image)
-								downloader.donwloadImg(image, uploadPath + '/' + path.basename(image))
+								let filename = downloadPath + "\'" + path.basename(image);
+								downloader.donwloadImg(image, downloadPath + '/' + path.basename(image));
 							}
-						})
-
+						});
 				    }
-				})
+				});
 			}
 		}
 	}
-
-	console.log('ERROR => ', fileCreationError)
+	if(fileCreationError.length > 0){
+		console.log(`Errors => ${fileCreationError}`);
+	}
 }
-
-
-
-// path => uploads/folder
-// file => name of txt file
-// const createFiles = (path, file, content) => {
-
-// 	if (fs.existsSync(path)) {
-// 	    console.log('Found file')
-// 	}else{
-// 		console.log("File not exist")
-// 		fs.mkdir(path.join(__dirname, path), (err) => {
-// 		    if (err) {
-// 		        return console.error(err)
-// 		    }else{
-// 		    	console.log('Dossier '  + path + ' crée avec succès')
-
-// 		    }
-
-// 			fs.writeFile(path + file, content, function (err) {
-// 				if (err) throw err
-// 			console.log('Fichier ' + file + ' créé !')
-// 			})
-	    	
-// 		})
-// 	}
-// }

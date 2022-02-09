@@ -23,7 +23,7 @@ console.log(`args => ${args}`);
 // Génère toutes les urls à scrapp
 const getAllUrls = async baseUrl => {
 	const urlList = [];
-	for( let i = 1; i < NBR_PAGE; i++){
+	for (let i = 1; i < NBR_PAGE; i++) {
 		urlList.push(baseUrl + i + ".html");
 	}
 	return urlList;
@@ -40,26 +40,26 @@ const getallDatas = async url => {
 	const page = await browser.newPage();
 
 	// Timeout config
-    await page.setDefaultNavigationTimeout(0);
+	await page.setDefaultNavigationTimeout(0);
 	await page.goto(url);
-	await page.waitForTimeout(1000) ;
+	await page.waitForTimeout(1000);
 
 	const articles = await page.evaluate((url) => {
 
 		let articles = [];
 		let elements = document.querySelectorAll('div.article');
-		for(element of elements){
+		for (element of elements) {
 
 			let title = element.querySelector('div.article-top > div.left');
 			let body = element.querySelector('div.article-body');
-		    let imagefiles = Array.from(
-		      element.querySelectorAll('div.article-body img'),
-		      img => img.src);
+			let imagefiles = Array.from(
+				element.querySelectorAll('div.article-body img'),
+				img => img.src);
 
 			articles.push({
-				title : title.textContent,
-				body : body.textContent,
-				images : imagefiles
+				title: title.textContent,
+				body: body.textContent,
+				images: imagefiles
 			});
 		}
 
@@ -72,7 +72,7 @@ const getallDatas = async url => {
 
 
 // Scrapp 
-const scrap = async() => {
+const scrap = async () => {
 
 	const urlList = await getAllUrls(baseUrl);
 	const results = await Promise.all(
@@ -83,7 +83,7 @@ const scrap = async() => {
 
 
 // Scrapp execution
-scrap().then( results => {
+scrap().then(results => {
 	createFolderProcess(results);
 	console.log('End script ...');
 
@@ -94,40 +94,40 @@ scrap().then( results => {
 
 // Create folder for each article
 const createFolderProcess = results => {
-	// console.log(`Results => ${results}`);
+
 	// console.log('Results => ', results);
 
-	for(let i = 0; i < results.length; i++){
-		for(let j = 0; j < results[i].length; j++){
+	for (let i = 0; i < results.length; i++) {
+		for (let j = 0; j < results[i].length; j++) {
 
 			const title = results[i][j].title;
 			const content = results[i][j].body;
-			const images = results[i][j].images ;
+			const images = results[i][j].images;
 			const downloadPath = UPLOAD_FOLDER + title;
 
 			if (fs.existsSync(downloadPath)) {
 				console.log(`File already exist => ${downloadPath}`);
-			}else{
+			} else {
 				fs.mkdir(path.join(__dirname, downloadPath), (err) => {
-				    if (err) {
-				        console.error(err);
-				        fileCreationError.push(downloadPath);
-				    }else{
-				    	fs.writeFile(downloadPath + '/Article.txt', content, err => {
+					if (err) {
+						console.error(err);
+						fileCreationError.push(downloadPath);
+					} else {
+						fs.writeFile(downloadPath + '/Article.txt', content, err => {
 
-				    		if(err) console.log('Error MKDIR => ', err);
-							for(let k = 0; k < images.length; k++){
+							if (err) console.log('Error MKDIR => ', err);
+							for (let k = 0; k < images.length; k++) {
 								let image = images[k];
 								let filename = downloadPath + "\'" + path.basename(image);
 								downloader.donwloadImg(image, downloadPath + '/' + path.basename(image));
 							}
 						});
-				    }
+					}
 				});
 			}
 		}
 	}
-	if(fileCreationError.length > 0){
+	if (fileCreationError.length > 0) {
 		console.log(`Errors => ${fileCreationError}`);
 	}
 }
